@@ -13,19 +13,18 @@ logger.setLevel(logging.INFO)
 
 def walker(
     path: Path,
-    is_interesting: Callable[[Path], bool],
+    with_hidden: bool,
 ) -> Generator[Path, None, None]:
     for root, dirs, files in os.walk(path):
-        files = [f for f in files if not f[0] == "."]
-        dirs[:] = [d for d in dirs if not d[0] == "."]
+        if not with_hidden:
+            files = [f for f in files if not f[0] == "."]
+            dirs[:] = [d for d in dirs if not d[0] == "."]
 
         for name in files:
-            filepath = Path(root).joinpath(name)
-            if is_interesting(filepath):
-                yield filepath
+            yield Path(root).joinpath(name)
 
 
-def validate_extensions(ctx, param, value):
+def validate_extensions(ctx, param, value) -> List[str]:
     if not value:
         return value
 
@@ -60,7 +59,7 @@ def build_validator(
     strategy: str,
 ) -> Callable[[Path], bool]:
     if extensions:
-        return lambda path: path.suffix.lower()[1:] in extensions
+        return lambda path: path.suffix[1:] in extensions
 
     if strategy == "bruteforce":
         return bruteforce
@@ -111,10 +110,10 @@ def format_file(handle: TextIO, check: bool) -> bool:
 @click.option(
     "-p",
     "--path",
-    required=True,
     default=Path("."),
-    help="Root of the project, folder will be traversed.",
+    help="Root of the project, folder will be traversed",
     show_default=True,
+    type=click.Path(exists=True),
 )
 @click.option(
     "-e",
@@ -132,21 +131,47 @@ def format_file(handle: TextIO, check: bool) -> bool:
 @click.option(
     "-s",
     "--strategy",
-    help="Strategy used to determine if file is text file in case extensions are not provided.",
+    help="Strategy used to determine if file is text file in case extensions are not provided",
     type=click.Choice(["bruteforce", "mimetype"], case_sensitive=False),
     default="bruteforce",
     show_default=True,
 )
-def format(path: Path, extensions: Optional[List[str]], check: bool, strategy: str):
+@click.option(
+    "-i",
+    "--ignore",
+    help="Paths containing provided string are skipped",
+    multiple=True,
+)
+@click.option(
+    "-h",
+    "--hidden",
+    help="Includes also hidden files",
+    is_flag=True,
+    default=False,
+    show_default=True,
+)
+def format(
+    path: Path,
+    extensions: Optional[List[str]],
+    check: bool,
+    strategy: str,
+    ignore: List[str],
+    hidden: bool,
+):
+    validator = build_validator(extensions, strategy)
+
     errors = []
-    for filepath in walker(path, build_validator(extensions, strategy)):
+    for filepath in walker(path, hidden):
+        if not validator(filepath) or any(i in str(filepath) for i in ignore):
+            continue
+
         with open(filepath, "r+") as f:
-            logger.info(f"Checking file: '{filepath}'.")
+            logger.info(f"Checking file: '{filepath}'")
             if not format_file(f, check):
                 errors.append(filepath)
 
     for error in errors:
-        logger.info(f"Found malformatted file '{error}'.")
+        logger.info(f"Found malformatted file '{error}'")
 
     if check and errors:
         exit(1)

@@ -82,7 +82,7 @@ def test_walker(tmp_path: Path):
     tmp_path.joinpath(".gldsa/file").touch()
     tmp_path.joinpath(".gldsa/.file").touch()
 
-    paths = list(walker(tmp_path, lambda _: True))
+    paths = list(walker(tmp_path, False))
     assert sorted(paths) == sorted([a, b])
 
 

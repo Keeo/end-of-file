@@ -7,6 +7,7 @@ from typing import List, Tuple, Dict
 import pytest
 from click.testing import CliRunner
 from src.end_of_file import format
+from tests.utils import write, assert_content
 
 
 @pytest.fixture
@@ -54,3 +55,35 @@ def test_interface(tmp_path: Path, runner, contents: Dict[str, List[Content]]):
             assert result.exit_code == 0
             with open(os.path.join(tmp_path, "sample.txt"), "r") as f:
                 assert f.read() == content.result
+
+
+def test_hidden(tmp_path: Path, runner):
+    content = "dsadsa"
+    filepath = tmp_path.joinpath(".sample.txt")
+    write(filepath, content)
+
+    result = runner.invoke(format, ["--path", tmp_path, "--check"])
+    assert_content(filepath, content)
+    assert result.exit_code == 0
+
+    result = runner.invoke(format, ["--path", tmp_path, "--check", "--hidden"])
+    assert_content(filepath, content)
+    assert result.exit_code == 1
+
+    result = runner.invoke(format, ["--path", tmp_path, "--hidden"])
+    assert_content(filepath, content + "\n")
+    assert result.exit_code == 0
+
+
+def test_ignore(tmp_path: Path, runner):
+    content = "dsadsa"
+    filepath = tmp_path.joinpath("sample.txt")
+    write(filepath, content)
+
+    result = runner.invoke(format, ["--path", tmp_path, "-i", "sample"])
+    assert_content(filepath, content)
+    assert result.exit_code == 0
+
+    result = runner.invoke(format, ["--path", tmp_path, "-i", "smple", "-i", "dsa"])
+    assert_content(filepath, content + "\n")
+    assert result.exit_code == 0

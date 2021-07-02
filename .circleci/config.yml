@@ -14,7 +14,14 @@ jobs:
     steps:
       - checkout
       - run: pip install black
-      - run: python -m black . --check
+      - run: black . --check
+  example:
+    docker:
+      - image: circleci/python:3
+    steps:
+      - checkout
+      - run: pip install end-of-file
+      - run: eof --check
   format:
     docker:
       - image: circleci/python:3
@@ -30,6 +37,7 @@ workflows:
   version: 2
   default:
     jobs:
+      - example
       - format
       - test
       - lint
