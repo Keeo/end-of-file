@@ -1,5 +1,5 @@
 # End of file
-End of file is formatter to ensure text files always end with one newline. Eof is able to resolve every possible situation - missing newline, more then one newline and whitespaces mixed with newlines. Eof is heavily configurable using parameters, no config file is needed.
+End of file is formatter to ensure text files always end with one newline. Eof is able to resolve every possible situation - missing newline, more then one newline and whitespaces mixed with newlines. Simple configuration is done using parameters, no config file is needed.
 
 Configurable options:
  - include or exclude hidden files (file or folders starting with dot)
