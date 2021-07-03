@@ -26,7 +26,7 @@ To format project
 eof --path=./project
 ```
 
-To format only specific extensions (case insensitive)
+To format only specific extensions
 ```sh
 eof --path=./project --extensions=txt,md,py,rb,cpp
 ```
