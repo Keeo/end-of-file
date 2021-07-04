@@ -46,12 +46,12 @@ def test_interface(tmp_path: Path, runner, contents: Dict[str, List[Content]]):
             with open(tmp_path.joinpath("sample.txt"), "w") as f:
                 f.write(content.value)
 
-            result = runner.invoke(format, ["--path", tmp_path, "--check"])
+            result = runner.invoke(format, [str(tmp_path), "--check"])
             assert result.exit_code == content.exit_code
             with open(os.path.join(tmp_path, "sample.txt"), "r") as f:
                 assert f.read() == content.value
 
-            result = runner.invoke(format, ["--path", tmp_path])
+            result = runner.invoke(format, [str(tmp_path)])
             assert result.exit_code == 0
             with open(os.path.join(tmp_path, "sample.txt"), "r") as f:
                 assert f.read() == content.result
@@ -62,15 +62,15 @@ def test_hidden(tmp_path: Path, runner):
     filepath = tmp_path.joinpath(".sample.txt")
     write(filepath, content)
 
-    result = runner.invoke(format, ["--path", tmp_path, "--check"])
+    result = runner.invoke(format, [str(tmp_path), "--check"])
     assert_content(filepath, content)
     assert result.exit_code == 0
 
-    result = runner.invoke(format, ["--path", tmp_path, "--check", "--hidden"])
+    result = runner.invoke(format, [str(tmp_path), "--check", "--hidden"])
     assert_content(filepath, content)
     assert result.exit_code == 1
 
-    result = runner.invoke(format, ["--path", tmp_path, "--hidden"])
+    result = runner.invoke(format, [str(tmp_path), "--hidden"])
     assert_content(filepath, content + "\n")
     assert result.exit_code == 0
 
@@ -80,10 +80,10 @@ def test_ignore(tmp_path: Path, runner):
     filepath = tmp_path.joinpath("sample.txt")
     write(filepath, content)
 
-    result = runner.invoke(format, ["--path", tmp_path, "-i", "sample"])
+    result = runner.invoke(format, [str(tmp_path), "-i", "sample"])
     assert_content(filepath, content)
     assert result.exit_code == 0
 
-    result = runner.invoke(format, ["--path", tmp_path, "-i", "smple", "-i", "dsa"])
+    result = runner.invoke(format, [str(tmp_path), "-i", "smple", "-i", "dsa"])
     assert_content(filepath, content + "\n")
     assert result.exit_code == 0

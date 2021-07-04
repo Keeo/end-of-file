@@ -30,8 +30,8 @@ jobs:
       - run: pip install virtualenv
       - run: virtualenv venv
       - run: . venv/bin/activate && pip install -e .
-      - run: . venv/bin/activate && eof -p src/end_of_file -c
-      - run: . venv/bin/activate && eof -p tests -c
+      - run: . venv/bin/activate && eof src/end_of_file -c
+      - run: . venv/bin/activate && eof tests -c
 
 workflows:
   version: 2

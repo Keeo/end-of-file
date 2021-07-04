@@ -9,42 +9,27 @@ from src.end_of_file import (
     mimetype,
     format_file,
 )
+from tests.utils import write, read
 
 
-def test_format_file_no_line(tmp_path):
+def test_format_file_no_line(tmp_path: Path):
     bin_path = tmp_path.joinpath("file.txt")
-    with open(bin_path, "w+") as f:
-        f.write("dsadsa")
+    write(bin_path, "dsadsa")
 
-        f.seek(0)
-        assert not format_file(f, True)
-
-        f.seek(0)
-        assert not format_file(f, False)
-
-        f.seek(0)
-        assert format_file(f, False)
-
-        f.seek(0)
-        assert f.read() == "dsadsa\n"
+    assert not format_file(bin_path, True)
+    assert not format_file(bin_path, False)
+    assert format_file(bin_path, False)
+    assert read(bin_path) == "dsadsa\n"
 
 
 def test_format_file_multiple_lines(tmp_path):
     bin_path = tmp_path.joinpath("file.txt")
-    with open(bin_path, "w+") as f:
-        f.write("dsadsa\t\n\n  \n   \n\t\n")
+    write(bin_path, "dsadsa\t\n\n  \n   \n\t\n")
 
-        f.seek(0)
-        assert not format_file(f, True)
-
-        f.seek(0)
-        assert not format_file(f, False)
-
-        f.seek(0)
-        assert format_file(f, False)
-
-        f.seek(0)
-        assert f.read() == "dsadsa\n"
+    assert not format_file(bin_path, True)
+    assert not format_file(bin_path, False)
+    assert format_file(bin_path, False)
+    assert read(bin_path) == "dsadsa\n"
 
 
 def test_bruteforce(tmp_path: Path):

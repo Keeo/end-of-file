@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="end-of-file",
-    version="1.0.1",
+    version="1.1.0",
     author="Martin Moravek",
     author_email="moravek.martin@gmail.com",
     description="Small utility to ensure files end with one newline.",
