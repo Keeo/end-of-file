@@ -4,11 +4,21 @@ import click
 from pathlib import Path
 from typing import List, Generator, Optional, Callable, TextIO
 import os
+import subprocess
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("eof")
 logger.setLevel(logging.INFO)
+
+
+def get_git_files(path: Path) -> List[Path]:
+    result = subprocess.run(["git", "ls-files"], stdout=subprocess.PIPE, cwd=path)
+    if result.returncode != 0:
+        raise Exception("Could not get git to return files.")
+
+    rows = result.stdout.decode().strip().split("\n")
+    return list(map(lambda row: path.joinpath(row), rows))
 
 
 def walker(
@@ -54,65 +64,45 @@ def mimetype(path: Path) -> bool:
     return mimetype and mimetype.startswith("text")
 
 
-def build_validator(
-    extensions: Optional[List[str]],
-    strategy: str,
-) -> Callable[[Path], bool]:
-    if extensions:
-        return lambda path: path.suffix[1:] in extensions
+def format_file(filepath: Path, check: bool) -> bool:
+    with open(filepath, "r+") as f:
+        content = f.read()
 
-    if strategy == "bruteforce":
-        return bruteforce
+        if not content:
+            return True
 
-    if strategy == "mimetype":
-        return mimetype
+        count = 0
+        for tail in reversed(content):
+            if tail in ["\n", " ", "\t"]:
+                count += 1
 
-    raise Exception(
-        f"Please provide extensions list or valid strategy. Provided extensions: {extensions}, strategy: {strategy}."
-    )
+            else:
+                break
 
+        if count == 1:
+            return True
 
-def format_file(handle: TextIO, check: bool) -> bool:
-    content = handle.read()
+        if check:
+            return False
 
-    if not content:
-        return True
+        elif count == 0:
+            f.write("\n")
+            return False
 
-    count = 0
-    for tail in reversed(content):
-        if tail in ["\n", " ", "\t"]:
-            count += 1
+        elif count > 1:
+            f.seek(len(content) - count)
+            f.truncate()
+            f.write("\n")
+            return False
 
         else:
-            break
-
-    if count == 1:
-        return True
-
-    if check:
-        return False
-
-    elif count == 0:
-        handle.write("\n")
-        return False
-
-    elif count > 1:
-        handle.seek(len(content) - count)
-        handle.truncate()
-        handle.write("\n")
-        return False
-
-    else:
-        raise Exception(f"No idea what happened, count: '{count}'.")
+            raise Exception(f"No idea what happened, count: '{count}'.")
 
 
 @click.command()
-@click.option(
-    "-p",
-    "--path",
-    default=Path("."),
-    help="Root of the project, folder will be traversed",
-    show_default=True,
+@click.argument(
+    "path",
+    default=".",
     type=click.Path(exists=True),
 )
 @click.option(
@@ -137,6 +127,12 @@ def format_file(handle: TextIO, check: bool) -> bool:
     show_default=True,
 )
 @click.option(
+    "-g",
+    "--git",
+    help="Format only files managed by git (git ls-files)",
+    is_flag=True,
+)
+@click.option(
     "-i",
     "--ignore",
     help="Paths containing provided string are skipped",
@@ -157,24 +153,68 @@ def format(
     strategy: str,
     ignore: List[str],
     hidden: bool,
+    git: Optional[bool],
 ):
-    validator = build_validator(extensions, strategy)
+    path = Path(path)
+    rulebook = RuleBook.factory(
+        path,
+        extensions,
+        strategy,
+        ignore,
+        git,
+    )
 
     errors = []
     for filepath in walker(path, hidden):
-        if not validator(filepath) or any(i in str(filepath) for i in ignore):
+        if not rulebook.is_valid(filepath):
             continue
 
-        with open(filepath, "r+") as f:
-            logger.info(f"Checking file: '{filepath}'")
-            if not format_file(f, check):
-                errors.append(filepath)
+        logger.info(f"Checking file: '{filepath}'")
+        if not format_file(filepath, check):
+            errors.append(filepath)
 
     for error in errors:
         logger.info(f"Found malformatted file '{error}'")
 
     if check and errors:
         exit(1)
+
+
+class RuleBook:
+    rules: List[Callable[[Path], bool]] = []
+
+    def __init__(self, rules: List[Callable[[Path], bool]]):
+        self.rules = rules
+
+    def is_valid(self, path: Path) -> bool:
+        return all(rule(path) for rule in self.rules)
+
+    @staticmethod
+    def factory(
+        path: Path,
+        extensions: List[str],
+        strategy: str,
+        ignore: List[str],
+        git: bool,
+    ):
+        rules: List[Callable[[Path], bool]] = []
+
+        rules.append(lambda p: all(i not in str(p) for i in ignore))
+
+        if extensions:
+            rules.append(lambda path: path.suffix[1:] in extensions)
+
+        if strategy == "bruteforce":
+            rules.append(bruteforce)
+
+        if strategy == "mimetype":
+            rules.append(mimetype)
+
+        if git:
+            git_paths = get_git_files(path)
+            rules.append(lambda p: p in git_paths)
+
+        return RuleBook(rules)
 
 
 if __name__ == "__main__":

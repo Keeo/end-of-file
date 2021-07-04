@@ -5,6 +5,7 @@ Configurable options:
  - include or exclude hidden files (file or folders starting with dot)
  - blacklisted strings that are found inside traversed paths
  - whitelisted extensions
+ - whitelisted files that are registered with git
  - identification of text files (mimetype or bruteforce)
  - validation only mode for ci pipelines
 
@@ -23,17 +24,22 @@ eof --help
 
 To format project
 ```sh
-eof --path=./project
+eof ./project
+```
+
+If you are using git and are concerned only about files that are registered to git following flag can be used. Git must be installed for this option to work.
+```sh
+eof ./project --git
 ```
 
 To format only specific extensions
 ```sh
-eof --path=./project --extensions=txt,md,py,rb,cpp
+eof ./project --extensions=txt,md,py,rb,cpp
 ```
 
 To check in ci/cd if project is formatted correctly, return 0 if yes, 1 if changes are needed. Files are not changed.
 ```sh
-eof --path=./project --check
+eof ./project --check
 ```
 
 In case you have for example build destination in your project and want to skip it you can use --ignore flag. Paths with substring from this option are skipped.
